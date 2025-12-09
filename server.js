@@ -15,6 +15,9 @@ const PYTHON_API_URL = process.env.API_URL || 'http://localhost:5001';
 // Middleware
 app.use(express.json());
 app.use(express.static('public'));
+
+// Set views directory explicitly for Vercel
+app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'ejs');
 
 // Routes
