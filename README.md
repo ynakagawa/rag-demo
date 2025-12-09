@@ -1,12 +1,13 @@
 # RAG-demo Chatbot
 
-A simple Node.js-based chatbot application powered by LangChain and OpenAI, with LangSmith tracing integration.
+A production-ready chatbot application using Python serverless functions on Vercel, powered by LangChain and OpenAI, with LangSmith tracing integration.
 
 ## 🏗️ Architecture
 
-- **Python Backend (Flask)**: API server that handles LangChain agent interactions
-- **Node.js Frontend (Express)**: Web server that serves the chat interface
-- **LangSmith**: Traces and monitors all LLM interactions
+- **Python Serverless Functions**: LangChain-powered API endpoints (deployed with Vercel's Python runtime)
+- **Node.js Frontend (Express)**: Beautiful web interface for the chat
+- **LangSmith**: Real-time tracing and monitoring of all LLM interactions
+- **Vercel Platform**: Serverless deployment with automatic scaling
 
 ## 📋 Prerequisites
 
@@ -73,31 +74,45 @@ http://localhost:3000
 
 ```
 RAG-demo/
-├── agent_api.py          # Flask API backend
-├── server.js             # Node.js Express server
-├── package.json          # Node.js dependencies
+├── api/
+│   ├── chat.py          # Python serverless function for chat
+│   ├── reset.py         # Python serverless function for reset
+│   └── health.py        # Python serverless function for health
 ├── views/
-│   └── chat.ejs         # Chat interface template
-├── test_agent.py        # Simple test script
-├── .env                 # Environment variables
-├── venv/                # Python virtual environment
-└── start.sh             # Startup script
+│   └── chat.ejs         # Beautiful chat interface
+├── agent_api.py         # Flask API for local development
+├── server.js            # Node.js Express server
+├── requirements.txt     # Python dependencies (for Vercel)
+├── package.json         # Node.js dependencies
+├── vercel.json          # Vercel configuration (Python + Node.js)
+├── test_agent.py        # Test script
+├── .env                 # Environment variables (local only)
+└── venv/                # Python virtual environment (local only)
 ```
 
 ## 🔧 API Endpoints
 
-### Python Backend (Port 5000)
+### Local Development
 
-- `GET /health` - Health check endpoint
-- `POST /chat` - Send a message to the agent
-- `POST /reset` - Reset conversation history
+**Python Backend (Port 5001):**
+- `GET /health` - Health check
+- `POST /chat` - Chat with AI
+- `POST /reset` - Reset conversation
 
-### Node.js Frontend (Port 3000)
-
+**Node.js Frontend (Port 3000):**
 - `GET /` - Chat interface
-- `POST /api/chat` - Proxy to Python backend
-- `POST /api/reset` - Proxy to Python backend
-- `GET /health` - Combined health check
+- `POST /api/chat` - Proxy to backend
+- `POST /api/reset` - Proxy to backend
+- `GET /health` - Health check
+
+### Production (Vercel)
+
+**Python Serverless Functions:**
+- `/api/chat` - Chat endpoint
+- `/api/reset` - Reset endpoint
+- `/api/health` - Health check
+
+All routes are serverless and auto-scale!
 
 ## 📊 LangSmith Tracing
 
@@ -131,6 +146,20 @@ python test_agent.py
 - Add `.env` to `.gitignore`
 - Keep your API keys secure
 - Use environment-specific configuration for production
+
+## 🚀 Deploying to Vercel
+
+This app uses **Vercel's Python runtime** for serverless Python functions!
+
+See detailed deployment guide: [VERCEL_PYTHON_DEPLOYMENT.md](./VERCEL_PYTHON_DEPLOYMENT.md)
+
+**Quick steps:**
+1. Push to GitHub (already done!)
+2. Import to Vercel: https://vercel.com
+3. Add environment variables (OPENAI_API_KEY, etc.)
+4. Deploy!
+
+Reference: [Vercel Python Runtime Documentation](https://vercel.com/docs/functions/runtimes/python)
 
 ## 📝 License
 
