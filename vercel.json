@@ -1,0 +1,31 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "server.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "api/**/*.js",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/server.js"
+    }
+  ],
+  "env": {
+    "OPENAI_API_KEY": "@openai-api-key",
+    "LANGSMITH_API_KEY": "@langsmith-api-key",
+    "LANGSMITH_TRACING": "true",
+    "LANGSMITH_PROJECT": "pr-pertinent-bookend-77",
+    "LANGSMITH_ENDPOINT": "https://api.smith.langchain.com"
+  }
+}
+

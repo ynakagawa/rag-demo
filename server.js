@@ -6,8 +6,11 @@ const axios = require('axios');
 const path = require('path');
 
 const app = express();
-const PORT = 3000;
-const PYTHON_API_URL = 'http://localhost:5001';
+const PORT = process.env.PORT || 3000;
+
+// Use environment variable for API URL (for Vercel deployment)
+// In Vercel, this will be the same domain; locally it's the Python backend
+const PYTHON_API_URL = process.env.API_URL || 'http://localhost:5001';
 
 // Middleware
 app.use(express.json());
@@ -21,13 +24,17 @@ app.get('/', (req, res) => {
     });
 });
 
-// Proxy endpoint to Python API
+// Proxy endpoint to Python API (or local Vercel functions)
 app.post('/api/chat', async (req, res) => {
     try {
-        const response = await axios.post(`${PYTHON_API_URL}/chat`, req.body);
+        // If running on Vercel, the API routes are handled by serverless functions
+        // This proxy is mainly for local development with Python backend
+        const response = await axios.post(`${PYTHON_API_URL}/chat`, req.body, {
+            timeout: 30000, // 30 second timeout
+        });
         res.json(response.data);
     } catch (error) {
-        console.error('Error calling Python API:', error.message);
+        console.error('Error calling API:', error.message);
         res.status(500).json({ 
             error: 'Failed to get response from agent',
             details: error.message 
@@ -37,7 +44,9 @@ app.post('/api/chat', async (req, res) => {
 
 app.post('/api/reset', async (req, res) => {
     try {
-        const response = await axios.post(`${PYTHON_API_URL}/reset`, req.body);
+        const response = await axios.post(`${PYTHON_API_URL}/reset`, req.body, {
+            timeout: 5000,
+        });
         res.json(response.data);
     } catch (error) {
         console.error('Error resetting conversation:', error.message);
@@ -51,7 +60,9 @@ app.post('/api/reset', async (req, res) => {
 // Health check
 app.get('/health', async (req, res) => {
     try {
-        const response = await axios.get(`${PYTHON_API_URL}/health`);
+        const response = await axios.get(`${PYTHON_API_URL}/health`, {
+            timeout: 5000,
+        });
         res.json({ 
             status: 'healthy',
             backend: response.data 
@@ -59,7 +70,8 @@ app.get('/health', async (req, res) => {
     } catch (error) {
         res.status(503).json({ 
             status: 'unhealthy',
-            error: 'Python backend not available' 
+            error: 'Backend not available',
+            details: error.message
         });
     }
 });
