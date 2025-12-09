@@ -1,0 +1,22 @@
+{
+  "name": "rag-demo-chatbot",
+  "version": "1.0.0",
+  "description": "Node.js chatbot interface for LangChain agent",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "keywords": ["chatbot", "langchain", "node"],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.18.2",
+    "axios": "^1.6.0",
+    "ejs": "^3.1.9"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}
+
