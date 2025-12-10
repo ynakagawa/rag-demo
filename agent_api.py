@@ -1,10 +1,11 @@
 """
-Flask API wrapper for the LangChain agent
+Flask API wrapper for the LangChain agent with RAG support
 """
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, AIMessage
+from rag_agent import AEMRAGAgent
 from dotenv import load_dotenv
 import os
 
@@ -17,6 +18,14 @@ CORS(app)  # Enable CORS for Node.js frontend
 # Initialize the LLM
 llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.7)
 
+# Initialize RAG agent
+print("🚀 Initializing RAG agent...")
+rag_agent = AEMRAGAgent()
+if rag_agent.is_ready():
+    print("✅ RAG agent ready for AEM questions!")
+else:
+    print("⚠️  RAG agent not available. Run 'python indexer.py' to enable RAG.")
+
 # Store conversation history (in production, use a proper database)
 conversation_history = {}
 
@@ -27,15 +36,40 @@ def health():
 
 @app.route('/chat', methods=['POST'])
 def chat():
-    """Chat endpoint"""
+    """Chat endpoint with RAG support"""
     try:
         data = request.json
         user_message = data.get('message', '')
         session_id = data.get('session_id', 'default')
+        use_rag = data.get('use_rag', True)
         
         if not user_message:
             return jsonify({"error": "No message provided"}), 400
         
+        # Check if question is AEM-related
+        aem_keywords = ['aem', 'adobe', 'experience manager', 'dispatcher', 'component', 'sling', 'jcr', 'dam', 'assets', 'sites', 'forms']
+        is_aem_question = any(keyword in user_message.lower() for keyword in aem_keywords)
+        
+        # Use RAG for AEM questions if available
+        if use_rag and is_aem_question and rag_agent.is_ready():
+            result = rag_agent.query(user_message)
+            response_text = result["answer"]
+            
+            # Add sources if available
+            if result.get("sources"):
+                sources_text = "\n\n📚 **Sources:**\n"
+                for i, source in enumerate(result["sources"][:2], 1):
+                    sources_text += f"{i}. {source['source']}\n"
+                response_text += sources_text
+            
+            return jsonify({
+                "response": response_text,
+                "session_id": session_id,
+                "mode": "rag",
+                "sources": result.get("sources", [])
+            })
+        
+        # Fall back to conversational mode
         # Get or create conversation history for this session
         if session_id not in conversation_history:
             conversation_history[session_id] = []
@@ -55,7 +89,8 @@ def chat():
         
         return jsonify({
             "response": response.content,
-            "session_id": session_id
+            "session_id": session_id,
+            "mode": "conversational"
         })
     
     except Exception as e:
