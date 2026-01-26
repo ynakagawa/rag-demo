@@ -7,6 +7,7 @@ from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, AIMessage
 from rag_agent import AEMRAGAgent
 from mcp_client import MCPClient, MCPIntegratedAgent
+from intelligent_agent import IntelligentMCPAgent
 from dotenv import load_dotenv
 import os
 
@@ -37,9 +38,14 @@ if mcp_client.is_healthy():
     print("✅ MCP server connected successfully!")
     mcp_tools = mcp_client.list_tools()
     print(f"✅ Loaded {len(mcp_tools)} MCP tools")
+    
+    # Initialize intelligent agent with automatic tool execution
+    intelligent_agent = IntelligentMCPAgent(mcp_client, rag_agent)
+    print("✅ Intelligent MCP agent initialized with automatic tool execution")
 else:
     print("⚠️  MCP server not available")
     mcp_tools = []
+    intelligent_agent = None
 
 # Store conversation history (in production, use a proper database)
 conversation_history = {}
@@ -85,16 +91,30 @@ def execute_mcp_tool():
 
 @app.route('/chat', methods=['POST'])
 def chat():
-    """Chat endpoint with RAG support"""
+    """Chat endpoint with intelligent RAG and MCP tool execution"""
     try:
         data = request.json
         user_message = data.get('message', '')
         session_id = data.get('session_id', 'default')
-        use_rag = data.get('use_rag', True)
+        auto_execute = data.get('auto_execute', True)  # Enable auto tool execution
         
         if not user_message:
             return jsonify({"error": "No message provided"}), 400
         
+        # Use intelligent agent if available
+        if intelligent_agent and auto_execute:
+            print(f"🤖 Processing with intelligent agent: {user_message}")
+            result = intelligent_agent.process_message(user_message)
+            
+            return jsonify({
+                "response": result.get("response"),
+                "session_id": session_id,
+                "mode": result.get("mode"),
+                "tool_executed": result.get("tool_executed"),
+                "sources": result.get("sources", [])
+            })
+        
+        # Fall back to original logic
         # Check if question is AEM-related or MCP tool request
         aem_keywords = ['aem', 'adobe', 'experience manager', 'dispatcher', 'component', 'sling', 'jcr', 'dam', 'assets', 'sites', 'forms']
         mcp_keywords = ['create', 'delete', 'list', 'upload', 'workflow', 'site', 'microsite', 'template']
@@ -103,7 +123,7 @@ def chat():
         is_mcp_request = any(keyword in user_message.lower() for keyword in mcp_keywords)
         
         # Use RAG for AEM questions if available
-        if use_rag and is_aem_question and rag_agent.is_ready():
+        if is_aem_question and rag_agent.is_ready():
             result = rag_agent.query(user_message)
             response_text = result["answer"]
             
