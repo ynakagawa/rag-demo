@@ -35,6 +35,16 @@ Available MCP tools:
 IMPORTANT: The calculator tool requires "expression" as a STRING containing the math expression.
 Example: {{"expression": "5 + 3"}} NOT {{"operation": "add", "operands": [5, 3]}}
 
+CRITICAL FOR AEM TOOLS:
+- ANY request to list, create, get, delete, or manage AEM content/sites/assets = should_execute: true
+- Questions phrased as "can you...", "please...", "show me..." about AEM sites/content are ACTIONS, not knowledge questions
+- "What is AEM?" or "How does AEM work?" = should_execute: false (conceptual/knowledge questions)
+- "List sites", "Show sites", "Can you list sites", "Get sites" = should_execute: true (action requests)
+
+Default arguments for AEM tools:
+- aem-list-sites: {{"path": "/content"}}
+- aem-get-site-info: {{"sitePath": "/content/<sitename>"}}
+
 Given a user message, determine:
 1. Does the user want to execute one of these tools? (yes/no)
 2. Which tool should be executed?
@@ -73,12 +83,20 @@ User: "What is AEM?"
     "reasoning": "This is a knowledge question, not a tool execution request"
 }}
 
-User: "List my AEM sites"
+User: "List my AEM sites" or "Can you list my AEM sites" or "Show me my sites"
 {{
     "should_execute": true,
     "tool_name": "aem-list-sites",
     "arguments": {{"path": "/content"}},
-    "reasoning": "User wants to list AEM sites"
+    "reasoning": "User wants to list AEM sites - this is an action request, not a knowledge question"
+}}
+
+User: "Get info for diomicrosite"
+{{
+    "should_execute": true,
+    "tool_name": "aem-get-site-info",
+    "arguments": {{"sitePath": "/content/diomicrosite"}},
+    "reasoning": "User wants to get information about a specific site"
 }}
 """
         
@@ -131,10 +149,14 @@ User: "List my AEM sites"
                 }
         
         # If not a tool execution, check if it's an AEM knowledge question
-        aem_keywords = ['aem', 'adobe', 'experience manager', 'dispatcher', 'component', 'what is', 'how does', 'explain']
-        is_aem_question = any(keyword in user_message.lower() for keyword in aem_keywords)
+        # Only use RAG for questions about concepts, not actions
+        knowledge_keywords = ['what is', 'how does', 'explain', 'what are', 'describe', 'tell me about']
+        is_knowledge_question = any(keyword in user_message.lower() for keyword in knowledge_keywords)
         
-        if is_aem_question and self.rag_agent.is_ready():
+        aem_keywords = ['aem', 'adobe', 'experience manager', 'dispatcher', 'component']
+        mentions_aem = any(keyword in user_message.lower() for keyword in aem_keywords)
+        
+        if is_knowledge_question and mentions_aem and self.rag_agent.is_ready():
             rag_result = self.rag_agent.query(user_message)
             return {
                 "response": rag_result["answer"],
@@ -144,7 +166,7 @@ User: "List my AEM sites"
         
         # Fall back to conversational mode
         return {
-            "response": "I can help you with AEM questions or execute AEM tools. Try asking about AEM or requesting an action like 'list my sites' or 'create a component'.",
+            "response": "I can help you with:\n\n🔧 **AEM Actions**: 'list sites', 'create microsite', 'get site info', etc.\n📚 **Knowledge**: 'What is AEM?', 'How does AEM work?', etc.\n🧮 **Tools**: 'calculate', 'echo', and more.\n\nWhat would you like to do?",
             "mode": "conversational"
         }
     
