@@ -53,6 +53,18 @@ class MCPClient:
     
     def call_tool(self, tool_name: str, arguments: Dict = None) -> Any:
         """Call a specific tool on the MCP server"""
+        # Add AEM credentials for AEM tools if available
+        if tool_name.startswith('aem-') and arguments is not None:
+            import os
+            aem_server = os.getenv('AEM_SERVER')
+            aem_token = os.getenv('AEM_TOKEN')
+            
+            # Add credentials if not already in arguments
+            if aem_server and 'server' not in arguments:
+                arguments['server'] = aem_server
+            if aem_token and 'token' not in arguments:
+                arguments['token'] = aem_token
+        
         result = self._call_jsonrpc("tools/call", {
             "name": tool_name,
             "arguments": arguments or {}
