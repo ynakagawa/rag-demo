@@ -52,22 +52,41 @@ class MCPClient:
         return result.get("result", {}).get("tools", [])
     
     def call_tool(self, tool_name: str, arguments: Dict = None) -> Any:
-        """Call a specific tool on the MCP server"""
-        # Add AEM credentials for AEM tools if available
-        if tool_name.startswith('aem-') and arguments is not None:
+        """Call a specific tool on the MCP server
+        
+        Automatically injects AEM credentials for all aem-* tools from environment variables:
+        - AEM_SERVER: Your AEM instance URL
+        - AEM_TOKEN: Your AEM authentication token
+        """
+        # Initialize arguments if None
+        if arguments is None:
+            arguments = {}
+        
+        # Auto-inject AEM credentials for all AEM tools
+        if tool_name.startswith('aem-'):
             import os
+            from dotenv import load_dotenv
+            load_dotenv()  # Ensure .env is loaded
+            
             aem_server = os.getenv('AEM_SERVER')
             aem_token = os.getenv('AEM_TOKEN')
             
-            # Add credentials if not already in arguments
-            if aem_server and 'server' not in arguments:
+            # Always add credentials for AEM tools
+            if aem_server:
                 arguments['server'] = aem_server
-            if aem_token and 'token' not in arguments:
+                print(f"🔧 Using AEM_SERVER: {aem_server}")
+            else:
+                print("⚠️  AEM_SERVER not set in .env file")
+                
+            if aem_token:
                 arguments['token'] = aem_token
+                print(f"🔑 Using AEM_TOKEN: ***{aem_token[-10:]}")
+            else:
+                print("⚠️  AEM_TOKEN not set in .env file")
         
         result = self._call_jsonrpc("tools/call", {
             "name": tool_name,
-            "arguments": arguments or {}
+            "arguments": arguments
         })
         
         if "error" in result:
