@@ -41,14 +41,21 @@ CRITICAL FOR AEM TOOLS:
 - "What is AEM?" or "How does AEM work?" = should_execute: false (conceptual/knowledge questions)
 - "List sites", "Show sites", "Can you list sites", "Get sites" = should_execute: true (action requests)
 
-Default arguments for AEM tools:
-- aem-list-sites: {{"path": "/content"}}
-- aem-get-site-info: {{"sitePath": "/content/<sitename>"}}
+CRITICAL: You MUST extract ALL required parameters from the user's message. If a required parameter is missing, you should still include it with a reasonable default or ask for clarification.
+
+Required parameters for AEM tools:
+- aem-create-microsite: REQUIRES "siteTitle" (string) - extract the site name/title from user message
+- aem-list-sites: {{"path": "/content"}} (default)
+- aem-get-site-info: REQUIRES "sitePath" (string) - format as "/content/<sitename>"
+- aem-delete-site: REQUIRES "sitePath" (string)
+- aem-create-component: REQUIRES "componentName" (string)
+- aem-create-content-fragment: REQUIRES "fragmentName" (string)
+- aem-upload-asset: REQUIRES "filePath" (string) and "destinationPath" (string)
 
 Given a user message, determine:
 1. Does the user want to execute one of these tools? (yes/no)
 2. Which tool should be executed?
-3. What are the arguments?
+3. What are the arguments? EXTRACT ALL REQUIRED PARAMETERS from the user's message.
 
 Respond ONLY with a JSON object in this format:
 {{
@@ -98,6 +105,22 @@ User: "Get info for diomicrosite"
     "arguments": {{"sitePath": "/content/diomicrosite"}},
     "reasoning": "User wants to get information about a specific site"
 }}
+
+User: "Create a microsite called Product Launch" or "Create microsite Product Launch" or "Create a new microsite named Product Launch"
+{{
+    "should_execute": true,
+    "tool_name": "aem-create-microsite",
+    "arguments": {{"siteTitle": "Product Launch"}},
+    "reasoning": "User wants to create a microsite - extracted siteTitle from message"
+}}
+
+User: "Create microsite MyNewSite"
+{{
+    "should_execute": true,
+    "tool_name": "aem-create-microsite",
+    "arguments": {{"siteTitle": "MyNewSite"}},
+    "reasoning": "User wants to create a microsite - extracted siteTitle from message"
+}}
 """
         
         messages = [
@@ -142,10 +165,16 @@ User: "Get info for diomicrosite"
                     "tool_result": result
                 }
             else:
+                # Parse error message for better user feedback
+                error_msg = result.get('error', 'Unknown error')
+                error_response = self._format_error_response(tool_name, error_msg, arguments)
+                
                 return {
-                    "response": f"❌ Error executing {tool_name}: {result.get('error')}",
+                    "response": error_response,
                     "mode": "mcp_error",
-                    "error": result.get("error")
+                    "error": error_msg,
+                    "tool_name": tool_name,
+                    "arguments": arguments
                 }
         
         # If not a tool execution, check if it's an AEM knowledge question
@@ -169,6 +198,38 @@ User: "Get info for diomicrosite"
             "response": "I can help you with:\n\n🔧 **AEM Actions**: 'list sites', 'create microsite', 'get site info', etc.\n📚 **Knowledge**: 'What is AEM?', 'How does AEM work?', etc.\n🧮 **Tools**: 'calculate', 'echo', and more.\n\nWhat would you like to do?",
             "mode": "conversational"
         }
+    
+    def _format_error_response(self, tool_name: str, error_msg: str, arguments: dict) -> str:
+        """Format error response with helpful guidance"""
+        formatted = f"❌ **Error executing `{tool_name}`**\n\n"
+        
+        # Check for validation errors
+        if "validation error" in error_msg.lower() or "invalid arguments" in error_msg.lower():
+            formatted += "**Missing or invalid parameters detected.**\n\n"
+            
+            # Try to extract missing parameter info from error
+            missing_params = re.findall(r'"([^"]+)"[^"]*"Required"', error_msg)
+            if missing_params:
+                formatted += f"**Missing required parameters:**\n"
+                for param in missing_params:
+                    formatted += f"- `{param}`\n"
+                formatted += "\n"
+            
+            # Provide guidance based on tool
+            if tool_name == "aem-create-microsite":
+                formatted += "💡 **To create a microsite, please specify a site title.**\n"
+                formatted += "Example: \"Create a microsite called MyNewSite\" or \"Create microsite Product Launch\"\n"
+            elif tool_name == "aem-get-site-info":
+                formatted += "💡 **Please specify the site path.**\n"
+                formatted += "Example: \"Get info for diomicrosite\" or \"Get site info for /content/mysite\"\n"
+            elif tool_name == "aem-create-component":
+                formatted += "💡 **Please specify the component name.**\n"
+                formatted += "Example: \"Create a component called Header\"\n"
+        
+        formatted += f"\n**Error details:** {error_msg}\n"
+        formatted += f"\n**Provided arguments:** {arguments}"
+        
+        return formatted
     
     def _format_tool_result(self, tool_name: str, result: dict) -> str:
         """Format the tool execution result for display"""
