@@ -150,7 +150,7 @@ All routes are serverless and auto-scale!
 
 All conversations are automatically traced in LangSmith. View your traces at:
 - URL: https://smith.langchain.com
-- Project: `pr-pertinent-bookend-77`
+- Project: `rag demo`
 
 ## 🧪 Testing
 

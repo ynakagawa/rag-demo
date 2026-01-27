@@ -16,7 +16,7 @@ Monitor your agent's performance at:
 
 ```
 https://smith.langchain.com
-Project: pr-pertinent-bookend-77
+Project: rag demo
 ```
 
 ### 🔧 Server Status

@@ -15,7 +15,7 @@ HTTPError('403 Client Error: Forbidden')
    - The API key might be invalid or expired
 
 2. **Project Doesn't Exist**
-   - The project `pr-pertinent-bookend-77` might not exist in your LangSmith account
+   - The project `rag demo` might not exist in your LangSmith account
 
 3. **Insufficient Permissions**
    - The API key might not have permissions to write to this project
@@ -36,7 +36,7 @@ HTTPError('403 Client Error: Forbidden')
 ### Option 2: Create/Verify Project
 
 1. Go to [https://smith.langchain.com](https://smith.langchain.com)
-2. Check if project `pr-pertinent-bookend-77` exists
+2. Check if project `rag demo` exists
 3. If not, create a new project or use an existing one
 4. Update `.env` file:
    ```bash

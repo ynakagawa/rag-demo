@@ -93,7 +93,7 @@ vercel dev
 LangSmith tracing works in both environments:
 - The serverless functions automatically use the environment variables
 - Visit https://smith.langchain.com to view traces
-- Project: `pr-pertinent-bookend-77`
+- Project: `rag demo`
 
 ## ⚠️ Important Notes
 

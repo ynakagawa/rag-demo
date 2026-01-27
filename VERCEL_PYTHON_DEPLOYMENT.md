@@ -70,7 +70,7 @@ In your Vercel project settings, add these environment variables:
 **Optional (for LangSmith tracing):**
 - `LANGSMITH_API_KEY` = Your LangSmith API key
 - `LANGSMITH_TRACING` = `true`
-- `LANGSMITH_PROJECT` = Your project name (e.g., `pr-pertinent-bookend-77`)
+- `LANGSMITH_PROJECT` = Your project name (e.g., `rag demo`)
 - `LANGSMITH_ENDPOINT` = `https://api.smith.langchain.com`
 
 ### Step 4: Deploy
