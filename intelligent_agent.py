@@ -32,6 +32,9 @@ class IntelligentMCPAgent:
 Available MCP tools:
 {tools_description}
 
+IMPORTANT: The calculator tool requires "expression" as a STRING containing the math expression.
+Example: {{"expression": "5 + 3"}} NOT {{"operation": "add", "operands": [5, 3]}}
+
 Given a user message, determine:
 1. Does the user want to execute one of these tools? (yes/no)
 2. Which tool should be executed?
@@ -52,6 +55,14 @@ User: "Echo hello world"
     "tool_name": "echo",
     "arguments": {{"message": "hello world"}},
     "reasoning": "User wants to echo a message"
+}}
+
+User: "Calculate 5 + 3" or "What is 5 plus 3"
+{{
+    "should_execute": true,
+    "tool_name": "calculator",
+    "arguments": {{"expression": "5 + 3"}},
+    "reasoning": "User wants to calculate a math expression"
 }}
 
 User: "What is AEM?"
