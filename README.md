@@ -1,4 +1,4 @@
-# RAG-demo Chatbot
+# AEM chatbot and agent
 
 A production-ready chatbot application using Python serverless functions on Vercel, powered by LangChain and OpenAI, with LangSmith tracing integration.
 
