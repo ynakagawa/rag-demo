@@ -68,8 +68,8 @@ class MCPClient:
             from dotenv import load_dotenv
             load_dotenv()  # Ensure .env is loaded
             
-            aem_server = os.getenv('AEM_SERVER')
-            aem_token = os.getenv('AEM_TOKEN')
+            aem_server = os.getenv('AEM_SERVER', '').strip()
+            aem_token = os.getenv('AEM_TOKEN', '').strip()
             
             # Always add credentials for AEM tools
             if aem_server:
@@ -80,7 +80,7 @@ class MCPClient:
                 
             if aem_token:
                 arguments['token'] = aem_token
-                print(f"🔑 Using AEM_TOKEN: ***{aem_token[-10:]}")
+                print(f"🔑 Using AEM_TOKEN: ***{aem_token[-10:]} (length: {len(aem_token)})")
             else:
                 print("⚠️  AEM_TOKEN not set in .env file")
         
