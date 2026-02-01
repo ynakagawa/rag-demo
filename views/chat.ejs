@@ -131,6 +131,78 @@
             border-bottom-left-radius: 4px;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
         }
+        
+        /* Asset thumbnail grid */
+        .asset-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 16px;
+            margin: 16px 0;
+            padding: 16px 0;
+        }
+        
+        .asset-thumbnail {
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            overflow: hidden;
+            background: white;
+            transition: transform 0.2s, box-shadow 0.2s;
+            cursor: pointer;
+        }
+        
+        .asset-thumbnail:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        .asset-image {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+            display: block;
+            background: #f5f5f5;
+        }
+        
+        .asset-placeholder {
+            width: 100%;
+            height: 150px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f5f5f5;
+            font-size: 48px;
+            color: #999;
+        }
+        
+        .asset-info {
+            padding: 12px;
+        }
+        
+        .asset-title {
+            font-weight: 600;
+            font-size: 14px;
+            color: #333;
+            margin-bottom: 4px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        
+        .asset-type {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+        }
+        
+        .asset-path {
+            font-size: 11px;
+            color: #999;
+            font-family: monospace;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
 
         .message-label {
             font-size: 12px;
@@ -294,6 +366,88 @@
         const typingIndicator = document.getElementById('typingIndicator');
 
         function formatMessageContent(content) {
+            // Check if content contains HTML (asset-grid)
+            // Use regex to handle whitespace variations
+            const htmlPattern = /<div\s+class\s*=\s*['"]asset-grid['"]/i;
+            const hasHtml = htmlPattern.test(content);
+            
+            if (hasHtml) {
+                // Split content into text and HTML parts
+                const parts = [];
+                let remaining = content;
+                
+                // Find and extract HTML blocks
+                while (true) {
+                    // Find HTML start using regex to handle whitespace
+                    const match = remaining.match(htmlPattern);
+                    if (!match) break;
+                    
+                    const htmlStart = match.index;
+                    
+                    // Extract text before HTML
+                    const beforeHtml = remaining.substring(0, htmlStart);
+                    if (beforeHtml.trim()) {
+                        parts.push({ type: 'text', content: beforeHtml });
+                    }
+                    
+                    // Find matching closing div for asset-grid
+                    // Count div depth to find the right closing tag
+                    let depth = 0;
+                    let htmlEnd = htmlStart;
+                    let foundStart = false;
+                    
+                    for (let i = htmlStart; i < remaining.length; i++) {
+                        // Check for opening div tag
+                        if (remaining.substring(i, i + 4) === '<div') {
+                            // Make sure it's not a closing tag or self-closing
+                            const nextChars = remaining.substring(i, Math.min(i + 50, remaining.length));
+                            if (!nextChars.startsWith('</div') && !nextChars.match(/<div[^>]*\/\s*>/)) {
+                                depth++;
+                                foundStart = true;
+                            }
+                        }
+                        // Check for closing div tag
+                        else if (remaining.substring(i, i + 6) === '</div>') {
+                            depth--;
+                            if (depth === 0 && foundStart) {
+                                htmlEnd = i + 6;
+                                break;
+                            }
+                        }
+                    }
+                    
+                    if (htmlEnd > htmlStart) {
+                        // Extract HTML block (preserve as-is, don't escape)
+                        const htmlBlock = remaining.substring(htmlStart, htmlEnd);
+                        parts.push({ type: 'html', content: htmlBlock });
+                        remaining = remaining.substring(htmlEnd);
+                    } else {
+                        // Couldn't find closing tag, treat rest as text
+                        break;
+                    }
+                }
+                
+                // Add any remaining text
+                if (remaining.trim()) {
+                    parts.push({ type: 'text', content: remaining });
+                }
+                
+                // Format parts: HTML stays as-is, text gets formatted
+                return parts.map(part => {
+                    if (part.type === 'html') {
+                        // Return HTML as-is without escaping
+                        return part.content;
+                    } else {
+                        return formatTextContent(part.content);
+                    }
+                }).join('');
+            } else {
+                // No HTML - standard formatting
+                return formatTextContent(content);
+            }
+        }
+        
+        function formatTextContent(content) {
             // Escape HTML to prevent XSS, then convert markdown-like formatting
             let formatted = content
                 .replace(/&/g, '&amp;')
@@ -312,8 +466,9 @@
             // Code: `code`
             formatted = formatted.replace(/`([^`]+)`/g, '<code style="background: #f0f0f0; padding: 2px 6px; border-radius: 3px; font-family: monospace;">$1</code>');
             
-            // Convert newlines to <br>
-            formatted = formatted.replace(/\n/g, '<br>');
+            // Convert newlines to <br> (but preserve HTML structure)
+            // Only convert newlines that aren't already inside HTML tags
+            formatted = formatted.replace(/(?<!>)\n(?!<)/g, '<br>');
             
             // Convert bullet points (- or •)
             formatted = formatted.replace(/^[-•]\s+(.+)$/gm, '<li>$1</li>');
@@ -332,14 +487,31 @@
             const label = isUser ? 'You' : 'AI Assistant';
             
             // Format content: preserve newlines and convert markdown
-            const formattedContent = isUser ? content.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') : formatMessageContent(content);
+            let formattedContent;
+            if (isUser) {
+                // Escape user content for security
+                formattedContent = content.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            } else {
+                // Format bot content (may contain HTML for asset grids)
+                formattedContent = formatMessageContent(content);
+            }
             
-            messageDiv.innerHTML = `
-                <div>
-                    <div class="message-label">${label}</div>
-                    <div class="message-content">${formattedContent}</div>
-                </div>
-            `;
+            // Create message structure
+            const messageWrapper = document.createElement('div');
+            const labelDiv = document.createElement('div');
+            labelDiv.className = 'message-label';
+            labelDiv.textContent = label;
+            
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'message-content';
+            
+            // Always use innerHTML to render formatted content (which may include HTML)
+            // formatMessageContent already handles escaping for non-HTML parts
+            contentDiv.innerHTML = formattedContent;
+            
+            messageWrapper.appendChild(labelDiv);
+            messageWrapper.appendChild(contentDiv);
+            messageDiv.appendChild(messageWrapper);
             
             chatMessages.appendChild(messageDiv);
             chatMessages.scrollTop = chatMessages.scrollHeight;

@@ -7,6 +7,8 @@ from mcp_client import MCPClient
 from rag_agent import AEMRAGAgent
 import json
 import re
+import os
+import urllib.parse
 
 class IntelligentMCPAgent:
     """Agent that can intelligently execute MCP tools based on user queries"""
@@ -375,17 +377,106 @@ Respond with only "yes" or "no"."""
     def _format_tool_result(self, tool_name: str, result: dict) -> str:
         """Format the tool execution result for display"""
         content = result.get("result", {}).get("content", [])
+        metadata = result.get("result", {}).get("metadata", {})
         
         formatted = f"✅ **Tool Executed:** `{tool_name}`\n\n"
         
-        if content:
-            for item in content:
-                if item.get("type") == "text":
-                    formatted += f"{item.get('text', '')}\n"
-                elif item.get("type") == "image":
-                    formatted += f"🖼️ Image: {item.get('data', '')[:100]}...\n"
+        # Special handling for asset search results
+        if tool_name == "aem-search-assets" and metadata.get("results"):
+            assets = metadata.get("results", [])
+            total = metadata.get("total", 0)
+            
+            formatted += f"🔍 **Found {len(assets)} asset(s) (Total: {total})**\n\n"
+            formatted += "<div class='asset-grid'>\n"
+            
+            # Get Scene7 base URL for Dynamic Media thumbnails
+            scene7_base = os.getenv("SCENE7_BASE_URL", "https://s7d9.scene7.com/is/image/CEM/")
+            # Ensure Scene7 base URL ends with /
+            if scene7_base and not scene7_base.endswith("/"):
+                scene7_base += "/"
+            
+            for asset in assets:
+                # Extract asset information - handle various possible field names
+                asset_path = asset.get("path") or asset.get("jcr:path") or asset.get("dam:path") or ""
+                asset_name = asset.get("name") or asset.get("jcr:name") or asset.get("dam:name") or "Unknown"
+                asset_title = asset.get("title") or asset.get("jcr:title") or asset.get("dc:title") or asset_name
+                thumbnail_url = asset.get("thumbnail") or asset.get("thumbnailUrl") or asset.get("rendition") or ""
+                asset_type = asset.get("type") or asset.get("jcr:primaryType") or asset.get("mimeType") or ""
+                
+                # Build thumbnail URL if not provided
+                if not thumbnail_url:
+                    # Try to extract asset identifier from various fields
+                    asset_id = asset.get("scene7Id") or asset.get("dynamicMediaId") or asset.get("id") or ""
+                    
+                    # If no explicit Scene7 ID, derive from asset name or path
+                    if not asset_id:
+                        # Extract filename from path or use name
+                        if asset_path:
+                            # Extract filename from path (e.g., /content/dam/path/to/file.jpg -> file)
+                            path_parts = asset_path.split("/")
+                            filename = path_parts[-1] if path_parts else asset_name
+                            # Remove file extension
+                            if "." in filename:
+                                asset_id = filename.rsplit(".", 1)[0]
+                            else:
+                                asset_id = filename
+                        else:
+                            # Use asset name, remove extension if present
+                            if "." in asset_name:
+                                asset_id = asset_name.rsplit(".", 1)[0]
+                            else:
+                                asset_id = asset_name
+                    
+                    # Construct Scene7 Dynamic Media thumbnail URL
+                    # Format: https://s7d9.scene7.com/is/image/CEM/{asset_id}?$thumbnail$
+                    if asset_id:
+                        # URL encode the asset ID (handle spaces, special chars)
+                        encoded_id = urllib.parse.quote(asset_id, safe='')
+                        thumbnail_url = f"{scene7_base}{encoded_id}?$thumbnail$"
+                
+                # Escape HTML in text fields to prevent XSS
+                def escape_html(text):
+                    if not text:
+                        return ""
+                    return str(text).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
+                
+                formatted += "<div class='asset-thumbnail'>\n"
+                if thumbnail_url:
+                    escaped_url = escape_html(thumbnail_url)
+                    escaped_title = escape_html(asset_title)
+                    formatted += f"  <img src='{escaped_url}' alt='{escaped_title}' class='asset-image' onerror=\"this.onerror=null; this.parentElement.querySelector('.asset-placeholder').style.display='flex'; this.style.display='none';\"/>\n"
+                    formatted += f"  <div class='asset-placeholder' style='display:none;'>📄</div>\n"
+                else:
+                    formatted += f"  <div class='asset-placeholder'>📄</div>\n"
+                formatted += "  <div class='asset-info'>\n"
+                formatted += f"    <div class='asset-title'>{escape_html(asset_title)}</div>\n"
+                if asset_type:
+                    formatted += f"    <div class='asset-type'>{escape_html(asset_type)}</div>\n"
+                if asset_path:
+                    formatted += f"    <div class='asset-path'>{escape_html(asset_path)}</div>\n"
+                formatted += "  </div>\n"
+                formatted += "</div>\n"
+            
+            formatted += "</div>\n\n"
+            
+            # Add summary text if available
+            if content:
+                for item in content:
+                    if item.get("type") == "text":
+                        text = item.get('text', '')
+                        # Skip if it's just the summary we already formatted
+                        if "Found:" not in text or len(assets) > 0:
+                            formatted += f"{text}\n"
         else:
-            formatted += "Tool executed successfully (no output)"
+            # Standard formatting for other tools
+            if content:
+                for item in content:
+                    if item.get("type") == "text":
+                        formatted += f"{item.get('text', '')}\n"
+                    elif item.get("type") == "image":
+                        formatted += f"🖼️ Image: {item.get('data', '')[:100]}...\n"
+            else:
+                formatted += "Tool executed successfully (no output)"
         
         return formatted
 
