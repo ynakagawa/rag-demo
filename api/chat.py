@@ -5,6 +5,10 @@ Uses Intelligent MCP Agent with RAG for Adobe Experience Manager
 from flask import Flask, request, jsonify
 import os
 import sys
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 # Add parent directory to path to import our modules
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -16,7 +20,7 @@ from intelligent_agent import IntelligentMCPAgent
 app = Flask(__name__)
 
 # Initialize MCP Client
-MCP_SERVER_URL = "https://332794-trainingprojecty-stage.adobeioruntime.net/api/v1/web/my-mcp-server/mcp-server"
+MCP_SERVER_URL = os.getenv('MCP_SERVER_URL', 'https://332794-trainingprojecty-stage.adobeioruntime.net/api/v1/web/my-mcp-server/mcp-server')
 mcp_client = MCPClient(MCP_SERVER_URL)
 
 # Initialize RAG Agent

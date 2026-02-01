@@ -30,7 +30,7 @@ else:
 
 # Initialize MCP client
 print("🔧 Initializing MCP client...")
-mcp_url = "https://332794-trainingprojecty-stage.adobeioruntime.net/api/v1/web/my-mcp-server/mcp-server"
+mcp_url = os.getenv('MCP_SERVER_URL', 'https://332794-trainingprojecty-stage.adobeioruntime.net/api/v1/web/my-mcp-server/mcp-server')
 mcp_client = MCPClient(mcp_url)
 
 # Check MCP server health

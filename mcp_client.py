@@ -205,11 +205,15 @@ class MCPIntegratedAgent:
 
 # Test the MCP integration
 if __name__ == "__main__":
+    from dotenv import load_dotenv
+    load_dotenv()
+    import os
+    
     print("🧪 Testing MCP Client Integration")
     print("=" * 60)
     
     # Initialize MCP client
-    mcp_url = "https://332794-trainingprojecty-stage.adobeioruntime.net/api/v1/web/my-mcp-server/mcp-server"
+    mcp_url = os.getenv('MCP_SERVER_URL', 'https://332794-trainingprojecty-stage.adobeioruntime.net/api/v1/web/my-mcp-server/mcp-server')
     client = MCPClient(mcp_url)
     
     # Test server health
