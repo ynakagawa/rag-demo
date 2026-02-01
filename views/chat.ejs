@@ -115,7 +115,8 @@
             padding: 12px 16px;
             border-radius: 18px;
             word-wrap: break-word;
-            line-height: 1.5;
+            line-height: 1.6;
+            white-space: pre-wrap; /* Preserve newlines and wrap text */
         }
 
         .message.user .message-content {
@@ -292,16 +293,51 @@
         const sendBtn = document.getElementById('sendBtn');
         const typingIndicator = document.getElementById('typingIndicator');
 
+        function formatMessageContent(content) {
+            // Escape HTML to prevent XSS, then convert markdown-like formatting
+            let formatted = content
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+            
+            // Convert markdown-style formatting to HTML
+            // Bold: **text** or __text__
+            formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            formatted = formatted.replace(/__(.*?)__/g, '<strong>$1</strong>');
+            
+            // Italic: *text* or _text_
+            formatted = formatted.replace(/(?<!\*)\*(?!\*)([^*]+?)(?<!\*)\*(?!\*)/g, '<em>$1</em>');
+            formatted = formatted.replace(/(?<!_)_(?!_)([^_]+?)(?<!_)_(?!_)/g, '<em>$1</em>');
+            
+            // Code: `code`
+            formatted = formatted.replace(/`([^`]+)`/g, '<code style="background: #f0f0f0; padding: 2px 6px; border-radius: 3px; font-family: monospace;">$1</code>');
+            
+            // Convert newlines to <br>
+            formatted = formatted.replace(/\n/g, '<br>');
+            
+            // Convert bullet points (- or •)
+            formatted = formatted.replace(/^[-•]\s+(.+)$/gm, '<li>$1</li>');
+            formatted = formatted.replace(/(<li>.*<\/li>)/s, '<ul style="margin: 8px 0; padding-left: 20px;">$1</ul>');
+            
+            // Convert numbered lists
+            formatted = formatted.replace(/^\d+\.\s+(.+)$/gm, '<li>$1</li>');
+            
+            return formatted;
+        }
+
         function addMessage(content, isUser = false) {
             const messageDiv = document.createElement('div');
             messageDiv.className = `message ${isUser ? 'user' : 'bot'}`;
             
             const label = isUser ? 'You' : 'AI Assistant';
             
+            // Format content: preserve newlines and convert markdown
+            const formattedContent = isUser ? content.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') : formatMessageContent(content);
+            
             messageDiv.innerHTML = `
                 <div>
                     <div class="message-label">${label}</div>
-                    <div class="message-content">${content}</div>
+                    <div class="message-content">${formattedContent}</div>
                 </div>
             `;
             
