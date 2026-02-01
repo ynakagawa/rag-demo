@@ -33,10 +33,82 @@ class AEMDocumentationIndexer:
         print("📚 Loading AEM documentation...")
         
         # Main AEM documentation URLs to index
+        # Organized by category for better coverage
+        
         aem_urls = [
-            "https://experienceleague.adobe.com/en/docs/experience-manager",
-            "https://experienceleague.adobe.com/en/docs/experience-manager-cloud-service",
-            "https://experienceleague.adobe.com/en/docs/experience-manager-65",
+            # ============================================================
+            # 1. Core top-level documentation hubs
+            # ============================================================
+            "https://experienceleague.adobe.com/en/docs/experience-manager",  # AEM general hub
+            "https://experienceleague.adobe.com/en/docs/experience-manager-cloud-service",  # AEMaaCS hub
+            "https://experienceleague.adobe.com/en/docs/experience-manager-65",  # AEM 6.5 hub
+            "https://experienceleague.adobe.com/en/browse/experience-manager/cloud-service",  # AEMaaCS browse hub
+            
+            # ============================================================
+            # 2. High-value Cloud Service guides
+            # ============================================================
+            # Getting started / overview
+            "https://experienceleague.adobe.com/en/docs/experience-manager-cloud-service/content/introduction/overview",
+            "https://experienceleague.adobe.com/en/docs/experience-manager-cloud-service/content/onboarding/journey/overview",
+            "https://experienceleague.adobe.com/en/docs/experience-manager-cloud-service/content/migration-journey/readiness",
+            
+            # Implementation / development
+            "https://experienceleague.adobe.com/en/docs/experience-manager-cloud-service/content/implementing/home",
+            
+            # Cloud Manager & pipelines
+            "https://experienceleague.adobe.com/en/docs/experience-manager-cloud-service/content/onboarding/concepts/cloud-manager-introduction",
+            "https://experienceleague.adobe.com/en/docs/experience-manager-cloud-service/content/implementing/deploying/overview-cloud-manager",
+            
+            # Experience Hub (new UX entry point)
+            "https://experienceleague.adobe.com/en/docs/experience-manager-cloud-service/content/experience-hub/experience-hub",
+            
+            # ============================================================
+            # 3. Capabilities: Sites, Assets, Forms, Headless, Edge Delivery
+            # ============================================================
+            # Sites / authoring / admin (Cloud Service)
+            "https://experienceleague.adobe.com/en/docs/experience-manager-cloud-service/content/sites/home",
+            
+            # Assets
+            "https://experienceleague.adobe.com/en/docs/experience-manager-cloud-service/content/assets/home",
+            
+            # Forms
+            "https://experienceleague.adobe.com/en/docs/experience-manager-cloud-service/content/forms/home",
+            
+            # Headless
+            "https://experienceleague.adobe.com/en/docs/experience-manager-cloud-service/content/headless/introduction",
+            
+            # Edge Delivery Services / implementation
+            "https://experienceleague.adobe.com/en/docs/experience-manager-cloud-service/content/edge-delivery/introduction",
+            
+            # ============================================================
+            # 4. AEM 6.5 essentials (for on-prem/AMS)
+            # ============================================================
+            # 6.5 Sites – authoring & admin
+            "https://experienceleague.adobe.com/en/docs/experience-manager-65/content/sites/authoring",
+            "https://experienceleague.adobe.com/en/docs/experience-manager-65/content/sites/administering",
+            
+            # 6.5 Assets
+            "https://experienceleague.adobe.com/en/docs/experience-manager-65/content/assets/home",
+            
+            # 6.5 implementation / dev
+            "https://experienceleague.adobe.com/en/docs/experience-manager-65/content/implementing/home",
+            "https://experienceleague.adobe.com/en/docs/experience-manager-65/content/implementing/developing/devtools/ht-projects-maven",
+            
+            # ============================================================
+            # 5. SDK, local dev & tutorials (great for "how do I" questions)
+            # ============================================================
+            # SDK & local development
+            "https://experienceleague.adobe.com/en/docs/experience-manager-learn/cloud-service/developing/basics/aem-sdk",
+            "https://experienceleague.adobe.com/en/docs/experience-manager-learn/cloud-service/developing/local-development-environment/overview",
+            
+            # General Cloud Service video/tutorial hub
+            "https://experienceleague.adobe.com/en/docs/experience-manager-learn/cloud-service/overview",
+            
+            # ============================================================
+            # 6. Release notes & troubleshooting context
+            # ============================================================
+            # Recent release notes (2025)
+            "https://experienceleague.adobe.com/en/docs/experience-manager-cloud-service/content/release-notes/release-notes/2025/release-notes-2025-11-0",
         ]
         
         documents = []

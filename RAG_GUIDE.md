@@ -258,19 +258,38 @@ Use Pinecone, Weaviate, or Qdrant:
 
 ### Add More AEM Documentation
 
-Edit `indexer.py`:
+The indexer now includes a comprehensive set of AEM documentation URLs organized by category:
 
-```python
-aem_urls = [
-    "https://experienceleague.adobe.com/en/docs/experience-manager",
-    "https://experienceleague.adobe.com/en/docs/experience-manager-cloud-service",
-    "https://experienceleague.adobe.com/en/docs/experience-manager-65",
-    # Add more URLs:
-    "https://experienceleague.adobe.com/en/docs/experience-manager-sites",
-    "https://experienceleague.adobe.com/en/docs/experience-manager-assets",
-    # ... etc
-]
-```
+**Core Hubs:**
+- AEM general hub
+- AEM as a Cloud Service hub
+- AEM 6.5 hub
+- AEMaaCS browse hub
+
+**Cloud Service Guides:**
+- Getting started and overview
+- Implementation and development
+- Cloud Manager and pipelines
+- Experience Hub
+
+**Capabilities:**
+- Sites, Assets, Forms
+- Headless and Edge Delivery
+
+**AEM 6.5:**
+- Sites authoring and admin
+- Assets
+- Implementation and development
+
+**SDK & Tutorials:**
+- AEM SDK
+- Local development environment
+- Video and tutorial hub
+
+**Release Notes:**
+- Recent release notes for troubleshooting
+
+To add more URLs, edit `indexer.py` and add them to the `aem_urls` list in the `load_aem_documentation()` method.
 
 ### Add PDF Documentation
 
