@@ -70,19 +70,27 @@ class MCPClient:
             
             aem_server = os.getenv('AEM_SERVER', '').strip()
             aem_token = os.getenv('AEM_TOKEN', '').strip()
+            aem_username = os.getenv('AEM_USERNAME', '').strip()
+            aem_password = os.getenv('AEM_PASSWORD', '').strip()
             
-            # Always add credentials for AEM tools
+            # Always add server for AEM tools
             if aem_server:
                 arguments['server'] = aem_server
                 print(f"🔧 Using AEM_SERVER: {aem_server}")
             else:
                 print("⚠️  AEM_SERVER not set in .env file")
-                
-            if aem_token:
+            
+            # Prefer username/password if available (some APIs require it)
+            if aem_username and aem_password:
+                arguments['username'] = aem_username
+                arguments['password'] = aem_password
+                print(f"🔑 Using AEM_USERNAME: {aem_username}")
+                print(f"🔑 Using AEM_PASSWORD: *** (hidden)")
+            elif aem_token:
                 arguments['token'] = aem_token
                 print(f"🔑 Using AEM_TOKEN: ***{aem_token[-10:]} (length: {len(aem_token)})")
             else:
-                print("⚠️  AEM_TOKEN not set in .env file")
+                print("⚠️  Neither AEM_TOKEN nor AEM_USERNAME/AEM_PASSWORD set in .env file")
         
         result = self._call_jsonrpc("tools/call", {
             "name": tool_name,

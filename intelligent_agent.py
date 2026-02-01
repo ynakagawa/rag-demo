@@ -222,9 +222,18 @@ User: "Create microsite MyNewSite"
             formatted += "The AEM credentials are invalid, expired, or insufficient.\n\n"
             
             # Provide tool-specific guidance
-            if "asset" in tool_name.lower() or "dam" in tool_name.lower():
-                formatted += "**For Asset Operations:**\n"
-                formatted += "Your token needs `assets:read` scope for searching assets.\n\n"
+            if "asset" in tool_name.lower() or "dam" in tool_name.lower() or "querybuilder" in error_msg.lower():
+                formatted += "**For Asset Operations (QueryBuilder API):**\n"
+                formatted += "The AEM QueryBuilder API may require username/password authentication instead of Bearer token.\n"
+                formatted += "Your token needs `assets:read` scope, OR use username/password authentication.\n\n"
+                formatted += "**Try username/password authentication:**\n"
+                formatted += "1. Add to your `.env` file:\n"
+                formatted += "   ```\n"
+                formatted += "   AEM_USERNAME=your-aem-username\n"
+                formatted += "   AEM_PASSWORD=your-aem-password\n"
+                formatted += "   ```\n"
+                formatted += "2. The system will automatically use username/password if available\n"
+                formatted += "3. Username/password takes precedence over token for QueryBuilder API\n\n"
             elif "site" in tool_name.lower() or "microsite" in tool_name.lower():
                 formatted += "**For Site Operations:**\n"
                 formatted += "Your token needs `sites:read` and `sites:write` scopes.\n\n"
@@ -239,6 +248,21 @@ User: "Create microsite MyNewSite"
             formatted += "- Token missing required scopes for this operation\n"
             formatted += "- AEM instance is not accessible\n\n"
             formatted += "**How to fix:**\n"
+            
+            # Check if QueryBuilder is mentioned (often needs username/password)
+            if "querybuilder" in error_msg.lower() or ("asset" in tool_name.lower() and "401" in error_msg):
+                formatted += "**Option 1: Use Username/Password (Recommended for QueryBuilder)**\n"
+                formatted += "1. Add to your `.env` file:\n"
+                formatted += "   ```\n"
+                formatted += "   AEM_USERNAME=your-aem-username\n"
+                formatted += "   AEM_PASSWORD=your-aem-password\n"
+                formatted += "   ```\n"
+                formatted += "2. Restart the application\n"
+                formatted += "3. Username/password will be used automatically\n\n"
+                formatted += "**Option 2: Fix Bearer Token**\n"
+            else:
+                formatted += "**Option 1: Fix Bearer Token**\n"
+            
             formatted += "1. Check your `.env` file has correct `AEM_SERVER` and `AEM_TOKEN`\n"
             formatted += "2. Generate a new AEM token from Adobe Developer Console\n"
             
