@@ -90,9 +90,23 @@ class MCPClient:
         })
         
         if "error" in result:
+            error_info = result["error"]
+            error_message = error_info.get("message", "Unknown error")
+            
+            # Try to extract more detailed error information
+            error_data = error_info.get("data", {})
+            if error_data:
+                # Check if there's nested error information
+                if isinstance(error_data, dict):
+                    nested_error = error_data.get("error") or error_data.get("message")
+                    if nested_error:
+                        error_message = f"{error_message}: {nested_error}"
+            
             return {
                 "success": False,
-                "error": result["error"]["message"]
+                "error": error_message,
+                "error_code": error_info.get("code"),
+                "error_data": error_data
             }
         
         return {

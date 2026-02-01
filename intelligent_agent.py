@@ -167,12 +167,21 @@ User: "Create microsite MyNewSite"
             else:
                 # Parse error message for better user feedback
                 error_msg = result.get('error', 'Unknown error')
+                
+                # Check for nested error messages (common in MCP responses)
+                error_data = result.get('error_data', {})
+                if error_data and isinstance(error_data, dict):
+                    nested_error = error_data.get('error') or error_data.get('message')
+                    if nested_error and nested_error not in error_msg:
+                        error_msg = f"{error_msg}: {nested_error}"
+                
                 error_response = self._format_error_response(tool_name, error_msg, arguments)
                 
                 return {
                     "response": error_response,
                     "mode": "mcp_error",
                     "error": error_msg,
+                    "error_code": result.get('error_code'),
                     "tool_name": tool_name,
                     "arguments": arguments
                 }
@@ -203,8 +212,29 @@ User: "Create microsite MyNewSite"
         """Format error response with helpful guidance"""
         formatted = f"❌ **Error executing `{tool_name}`**\n\n"
         
+        # Extract HTTP status codes from error message
+        status_code_match = re.search(r'status code (\d+)', error_msg.lower())
+        status_code = status_code_match.group(1) if status_code_match else None
+        
+        # Check for authentication errors (401)
+        if status_code == "401" or "401" in error_msg or "unauthorized" in error_msg.lower() or "authentication" in error_msg.lower():
+            formatted += "**🔐 Authentication Error (401)**\n\n"
+            formatted += "The AEM credentials are invalid, expired, or insufficient.\n\n"
+            formatted += "**Possible causes:**\n"
+            formatted += "- AEM token has expired (tokens typically expire after 24 hours)\n"
+            formatted += "- Invalid AEM token format\n"
+            formatted += "- AEM server URL is incorrect\n"
+            formatted += "- Insufficient permissions for this operation\n"
+            formatted += "- AEM instance is not accessible\n\n"
+            formatted += "**How to fix:**\n"
+            formatted += "1. Check your `.env` file has correct `AEM_SERVER` and `AEM_TOKEN`\n"
+            formatted += "2. Generate a new AEM token if it has expired\n"
+            formatted += "3. Verify the token has permissions to create microsites\n"
+            formatted += "4. Test AEM connectivity: `curl -H \"Authorization: Bearer YOUR_TOKEN\" YOUR_AEM_SERVER/api/sites.json`\n\n"
+            formatted += "**Note:** AEM tokens typically expire after 24 hours. You may need to refresh your token.\n"
+        
         # Check for validation errors
-        if "validation error" in error_msg.lower() or "invalid arguments" in error_msg.lower():
+        elif "validation error" in error_msg.lower() or "invalid arguments" in error_msg.lower():
             formatted += "**Missing or invalid parameters detected.**\n\n"
             
             # Try to extract missing parameter info from error
@@ -226,8 +256,36 @@ User: "Create microsite MyNewSite"
                 formatted += "💡 **Please specify the component name.**\n"
                 formatted += "Example: \"Create a component called Header\"\n"
         
-        formatted += f"\n**Error details:** {error_msg}\n"
-        formatted += f"\n**Provided arguments:** {arguments}"
+        # Check for other common errors
+        elif status_code == "409" or "already exists" in error_msg.lower() or "409" in error_msg:
+            formatted += "**⚠️ Resource Already Exists**\n\n"
+            formatted += "The microsite or resource you're trying to create already exists.\n"
+            formatted += "Try using a different name or delete the existing resource first.\n"
+        
+        elif status_code == "404" or "404" in error_msg or "not found" in error_msg.lower():
+            formatted += "**🔍 Resource Not Found**\n\n"
+            formatted += "The requested AEM resource could not be found.\n"
+            formatted += "Verify the resource path or name is correct.\n"
+        
+        elif status_code == "403":
+            formatted += "**🚫 Forbidden (403)**\n\n"
+            formatted += "You don't have permission to perform this operation.\n"
+            formatted += "Verify your AEM token has the necessary permissions.\n"
+        
+        elif status_code == "500" or status_code == "502" or status_code == "503":
+            formatted += "**⚠️ Server Error**\n\n"
+            formatted += "The AEM server encountered an error.\n"
+            formatted += "This may be a temporary issue. Please try again later.\n"
+        
+        else:
+            # Generic error handling
+            formatted += "**Error Details:**\n"
+        
+        formatted += f"\n**Error message:** {error_msg}\n"
+        
+        # Only show arguments if not an auth error (for security)
+        if "401" not in error_msg and "unauthorized" not in error_msg.lower():
+            formatted += f"\n**Provided arguments:** {arguments}"
         
         return formatted
     
