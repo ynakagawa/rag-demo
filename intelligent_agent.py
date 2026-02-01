@@ -188,11 +188,49 @@ User: "Create microsite MyNewSite"
         
         # If not a tool execution, check if it's an AEM knowledge question
         # Only use RAG for questions about concepts, not actions
-        knowledge_keywords = ['what is', 'how does', 'explain', 'what are', 'describe', 'tell me about']
+        knowledge_keywords = ['what is', 'how does', 'explain', 'what are', 'describe', 'tell me about', 'what do', 'how do']
         is_knowledge_question = any(keyword in user_message.lower() for keyword in knowledge_keywords)
         
-        aem_keywords = ['aem', 'adobe', 'experience manager', 'dispatcher', 'component']
+        # Expanded AEM keywords to catch more AEM-related queries
+        aem_keywords = [
+            # Core terms
+            'aem', 'adobe', 'experience manager',
+            # Capabilities
+            'sites', 'assets', 'dam', 'forms', 'headless',
+            # Features
+            'component', 'template', 'page', 'workflow', 'dispatcher',
+            'smart tag', 'smart tags', 'metadata', 'content fragment',
+            'experience fragment', 'launch', 'target', 'analytics',
+            # Technical terms
+            'sling', 'jcr', 'osgi', 'htl', 'sightly', 'cq',
+            'author', 'publish', 'dispatcher', 'replication',
+            # Cloud Service terms
+            'cloud service', 'cloud manager', 'edge delivery',
+            'graphql', 'content api', 'sdk', 'local dev'
+        ]
         mentions_aem = any(keyword in user_message.lower() for keyword in aem_keywords)
+        
+        # Also check if it's a general knowledge question that might be AEM-related
+        # Use LLM to determine if it's AEM-related if keywords don't match
+        if is_knowledge_question and not mentions_aem and self.rag_agent.is_ready():
+            # Try to determine if it's AEM-related using LLM
+            aem_check_prompt = f"""Is this question about Adobe Experience Manager (AEM) or related Adobe products?
+Question: "{user_message}"
+
+Respond with only "yes" or "no"."""
+            
+            try:
+                check_messages = [
+                    SystemMessage(content="You are a classifier that determines if questions are about Adobe Experience Manager."),
+                    HumanMessage(content=aem_check_prompt)
+                ]
+                aem_check_response = self.llm.invoke(check_messages)
+                is_aem_related = "yes" in aem_check_response.content.lower()
+                
+                if is_aem_related:
+                    mentions_aem = True
+            except Exception as e:
+                print(f"⚠️  Error checking AEM relevance: {e}")
         
         if is_knowledge_question and mentions_aem and self.rag_agent.is_ready():
             rag_result = self.rag_agent.query(user_message)
