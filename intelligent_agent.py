@@ -220,18 +220,39 @@ User: "Create microsite MyNewSite"
         if status_code == "401" or "401" in error_msg or "unauthorized" in error_msg.lower() or "authentication" in error_msg.lower():
             formatted += "**🔐 Authentication Error (401)**\n\n"
             formatted += "The AEM credentials are invalid, expired, or insufficient.\n\n"
+            
+            # Provide tool-specific guidance
+            if "asset" in tool_name.lower() or "dam" in tool_name.lower():
+                formatted += "**For Asset Operations:**\n"
+                formatted += "Your token needs `assets:read` scope for searching assets.\n\n"
+            elif "site" in tool_name.lower() or "microsite" in tool_name.lower():
+                formatted += "**For Site Operations:**\n"
+                formatted += "Your token needs `sites:read` and `sites:write` scopes.\n\n"
+            elif "component" in tool_name.lower() or "content" in tool_name.lower():
+                formatted += "**For Content Operations:**\n"
+                formatted += "Your token needs `content:read` and `content:write` scopes.\n\n"
+            
             formatted += "**Possible causes:**\n"
             formatted += "- AEM token has expired (tokens typically expire after 24 hours)\n"
             formatted += "- Invalid AEM token format\n"
             formatted += "- AEM server URL is incorrect\n"
-            formatted += "- Insufficient permissions for this operation\n"
+            formatted += "- Token missing required scopes for this operation\n"
             formatted += "- AEM instance is not accessible\n\n"
             formatted += "**How to fix:**\n"
             formatted += "1. Check your `.env` file has correct `AEM_SERVER` and `AEM_TOKEN`\n"
-            formatted += "2. Generate a new AEM token if it has expired\n"
-            formatted += "3. Verify the token has permissions to create microsites\n"
-            formatted += "4. Test AEM connectivity: `curl -H \"Authorization: Bearer YOUR_TOKEN\" YOUR_AEM_SERVER/api/sites.json`\n\n"
+            formatted += "2. Generate a new AEM token from Adobe Developer Console\n"
+            
+            if "asset" in tool_name.lower():
+                formatted += "3. Ensure token includes `assets:read` scope (and `assets:write` for uploads)\n"
+            elif "site" in tool_name.lower():
+                formatted += "3. Ensure token includes `sites:read` and `sites:write` scopes\n"
+            else:
+                formatted += "3. Verify the token has permissions for this operation\n"
+            
+            formatted += "4. Test AEM connectivity: `./test_aem_connectivity.sh`\n"
+            formatted += "5. Check token scopes: `python check_token_scopes.py`\n\n"
             formatted += "**Note:** AEM tokens typically expire after 24 hours. You may need to refresh your token.\n"
+            formatted += "See `AEM_PERMISSIONS_FIX.md` for detailed instructions.\n"
         
         # Check for validation errors
         elif "validation error" in error_msg.lower() or "invalid arguments" in error_msg.lower():
