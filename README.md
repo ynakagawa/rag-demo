@@ -27,6 +27,9 @@ A production-ready RAG (Retrieval-Augmented Generation) chatbot application for 
 Already done! But if you need to reinstall:
 
 ```bash
+#Python virtual environment (example uses a virtual env. called venv).
+https://www.w3schools.com/python/python_virtualenv.asp
+
 # Python dependencies
 source venv/bin/activate
 pip install -r requirements.txt
