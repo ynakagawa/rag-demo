@@ -53,6 +53,8 @@ Required parameters for AEM tools:
 - aem-create-component: REQUIRES "componentName" (string)
 - aem-create-content-fragment: REQUIRES "fragmentName" (string)
 - aem-upload-asset: REQUIRES "filePath" (string) and "destinationPath" (string)
+- aem-list-assets: REQUIRES "folder" (string) - DAM folder path, default to "/content/dam" if not specified
+- aem-search-assets: REQUIRES "query" (string) - search query for assets
 
 Given a user message, determine:
 1. Does the user want to execute one of these tools? (yes/no)
@@ -123,6 +125,30 @@ User: "Create microsite MyNewSite"
     "arguments": {{"siteTitle": "MyNewSite"}},
     "reasoning": "User wants to create a microsite - extracted siteTitle from message"
 }}
+
+User: "List assets" or "Show me assets" or "List assets in DAM"
+{{
+    "should_execute": true,
+    "tool_name": "aem-list-assets",
+    "arguments": {{"folder": "/content/dam"}},
+    "reasoning": "User wants to list assets - using default folder /content/dam"
+}}
+
+User: "List assets in /content/dam/products" or "Show assets in products folder"
+{{
+    "should_execute": true,
+    "tool_name": "aem-list-assets",
+    "arguments": {{"folder": "/content/dam/products"}},
+    "reasoning": "User wants to list assets in a specific folder - extracted folder path from message"
+}}
+
+User: "Search for logo assets" or "Find images with logo"
+{{
+    "should_execute": true,
+    "tool_name": "aem-search-assets",
+    "arguments": {{"query": "logo"}},
+    "reasoning": "User wants to search for assets - extracted search query from message"
+}}
 """
         
         messages = [
@@ -153,6 +179,11 @@ User: "Create microsite MyNewSite"
             # Execute the MCP tool
             tool_name = intent["tool_name"]
             arguments = intent.get("arguments", {})
+            
+            # Add default values for required parameters if missing
+            if tool_name == "aem-list-assets" and "folder" not in arguments:
+                arguments["folder"] = "/content/dam"
+                print(f"⚠️  Missing 'folder' parameter for aem-list-assets, using default: /content/dam")
             
             print(f"🔧 Executing MCP tool: {tool_name}")
             print(f"📝 Arguments: {arguments}")
@@ -387,9 +418,10 @@ Respond with only "yes" or "no"."""
             total = metadata.get("total", 0)
             
             formatted += f"🔍 **Found {len(assets)} asset(s) (Total: {total})**\n\n"
+            formatted += "📑 **Results:**\n\n"
             formatted += "<div class='asset-grid'>\n"
             
-            # Get Scene7 base URL for Dynamic Media thumbnails
+            # Use Scene7 Dynamic Media base URL
             scene7_base = os.getenv("SCENE7_BASE_URL", "https://s7d9.scene7.com/is/image/CEM/")
             # Ensure Scene7 base URL ends with /
             if scene7_base and not scene7_base.endswith("/"):
@@ -427,12 +459,14 @@ Respond with only "yes" or "no"."""
                             else:
                                 asset_id = asset_name
                     
-                    # Construct Scene7 Dynamic Media thumbnail URL
-                    # Format: https://s7d9.scene7.com/is/image/CEM/{asset_id}?$thumbnail$
+                    # Construct Dynamic Media thumbnail URL
+                    # Format: {aem_server}/is/image/CEM/{asset_id}?$thumbnail$&fmt=jpeg,rgb
                     if asset_id:
                         # URL encode the asset ID (handle spaces, special chars)
                         encoded_id = urllib.parse.quote(asset_id, safe='')
-                        thumbnail_url = f"{scene7_base}{encoded_id}?$thumbnail$"
+                        # Build query string - $ characters need to be URL encoded as %24
+                        # Note: The & will be HTML-escaped to &amp; when inserted into HTML
+                        thumbnail_url = f"{scene7_base}{encoded_id}?%24thumbnail%24&fmt=jpeg,rgb"
                 
                 # Escape HTML in text fields to prevent XSS
                 def escape_html(text):
@@ -442,9 +476,14 @@ Respond with only "yes" or "no"."""
                 
                 formatted += "<div class='asset-thumbnail'>\n"
                 if thumbnail_url:
+                    # For img src in HTML, we need to HTML-escape & to &amp;
+                    # The thumbnail_url already has proper URL encoding (%24 for $, etc.)
+                    # When HTML-escaped, & becomes &amp; which browsers handle correctly
                     escaped_url = escape_html(thumbnail_url)
                     escaped_title = escape_html(asset_title)
-                    formatted += f"  <img src='{escaped_url}' alt='{escaped_title}' class='asset-image' onerror=\"this.onerror=null; this.parentElement.querySelector('.asset-placeholder').style.display='flex'; this.style.display='none';\"/>\n"
+                    # Use double quotes for src to avoid conflicts with single quotes
+                    # Add error handler to show placeholder if image fails to load
+                    formatted += f"  <img src=\"{escaped_url}\" alt=\"{escaped_title}\" class=\"asset-image\" onerror=\"this.style.display='none'; this.nextElementSibling.style.display='flex';\"/>\n"
                     formatted += f"  <div class='asset-placeholder' style='display:none;'>📄</div>\n"
                 else:
                     formatted += f"  <div class='asset-placeholder'>📄</div>\n"
@@ -453,19 +492,34 @@ Respond with only "yes" or "no"."""
                 if asset_type:
                     formatted += f"    <div class='asset-type'>{escape_html(asset_type)}</div>\n"
                 if asset_path:
-                    formatted += f"    <div class='asset-path'>{escape_html(asset_path)}</div>\n"
+                    # Trim /content/dam prefix from path for display
+                    display_path = asset_path
+                    if display_path.startswith("/content/dam"):
+                        display_path = display_path[len("/content/dam"):]
+                    elif display_path.startswith("content/dam"):
+                        display_path = display_path[len("content/dam"):]
+                    formatted += f"    <div class='asset-path'>{escape_html(display_path)}</div>\n"
                 formatted += "  </div>\n"
                 formatted += "</div>\n"
             
             formatted += "</div>\n\n"
             
-            # Add summary text if available
+            # Skip content items since we've already formatted assets from metadata
+            # The asset grid above contains both images and metadata, so skip any duplicate content
+            # Only add non-asset-related summary text if needed
             if content:
                 for item in content:
+                    # Skip image items - we've already rendered them in the asset grid
+                    if item.get("type") == "image":
+                        continue
                     if item.get("type") == "text":
                         text = item.get('text', '')
-                        # Skip if it's just the summary we already formatted
-                        if "Found:" not in text or len(assets) > 0:
+                        # Skip content that contains asset-related information we've already formatted
+                        # Only include additional context that isn't duplicate
+                        text_lower = text.lower()
+                        skip_patterns = ["found:", "asset", "thumbnail", "path:", "type:", "title:"]
+                        is_duplicate = any(pattern in text_lower for pattern in skip_patterns)
+                        if not is_duplicate and text.strip():
                             formatted += f"{text}\n"
         else:
             # Standard formatting for other tools
