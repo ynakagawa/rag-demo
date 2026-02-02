@@ -33,8 +33,10 @@ https://www.w3schools.com/python/python_virtualenv.asp
 ```
 
 # Python dependencies
+```
 source venv/bin/activate
 pip install -r requirements.txt
+```
 
 # Node.js dependencies
 npm install
