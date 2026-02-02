@@ -29,6 +29,8 @@ Already done! But if you need to reinstall:
 ```bash
 #Python virtual environment (example uses a virtual env. called venv).
 https://www.w3schools.com/python/python_virtualenv.asp
+```python -m venv myfirstproject
+```
 
 # Python dependencies
 source venv/bin/activate
