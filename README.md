@@ -37,8 +37,29 @@ pip install -r requirements.txt
 # Node.js dependencies
 npm install
 ```
+#.env file (create a .env file and place API endpoints and keys 
+#OenAPI
+#   1. Go to https://openai.com
+#   2. Click Login > API Platform
+#   3. Create a free account (You may have to fund with a small amount.. eg. $5)
+#   4. You will get a "Deafult project" created, use that or create your own.
+#   5. Select API Keys & + Create new secret key
+#   6. Select "You" (versus Service Account) for demo purposes
+#   7. Provide a key name "Rag demo" and select "create".
+#   8. Copy value, please under <OPENAI_API_KEY>
+OPENAI_API_KEY=
 
-### 2. Index AEM Documentation (First Time Setup)
+#Langsmith (Observability capability of Langchain)
+#   1. Go to https://www.langchain.com/langsmith/observability
+#   2. Click on "Try Lansmith", which will lead you to https://smith.langchain.com/.  create an account.  I use github SSO
+#   3. From main dashboard, click on "Settings" in the left menu
+#   4. Use "Personal Access Token" (for demo purposes)
+#   5. <LANGSMITH_API_KEY> value should be the copy/paste of they key
+#   6. <LANGSMITH_PROJECT> value can be anything, i place the value in the description so that i can keep track
+LANGSMITH_API_KEY=
+LANGSMITH_PROJECT=
+LANGSMITH_TRACING=true
+LANGSMITH_ENDPOINT=https://api.smith.langchain.com
 
 Before using the RAG features, index the AEM documentation:
 
