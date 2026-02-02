@@ -159,6 +159,19 @@
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
         }
         
+        .asset-image-link {
+            display: block;
+            width: 150px;
+            height: 150px;
+            flex-shrink: 0;
+            overflow: hidden;
+            transition: transform 0.2s;
+        }
+        
+        .asset-image-link:hover {
+            transform: scale(1.05);
+        }
+        
         .asset-image {
             width: 150px;
             height: 150px;
@@ -166,7 +179,7 @@
             object-position: top center;
             display: block;
             background: #f5f5f5;
-            flex-shrink: 0;
+            cursor: pointer;
         }
         
         .asset-placeholder {

@@ -422,10 +422,9 @@ Respond with only "yes" or "no"."""
             formatted += "<div class='asset-grid'>\n"
             
             # Use Scene7 Dynamic Media base URL
-            scene7_base = os.getenv("SCENE7_BASE_URL", "https://s7d9.scene7.com/is/image/CEM/")
-            # Ensure Scene7 base URL ends with /
-            if scene7_base and not scene7_base.endswith("/"):
-                scene7_base += "/"
+            scene7_base = os.getenv("SCENE7_BASE_URL", "https://s7d9.scene7.com/is/image/CEM")
+            # Remove trailing slash if present, we'll add it properly
+            scene7_base = scene7_base.rstrip("/")
             
             for asset in assets:
                 # Extract asset information - handle various possible field names
@@ -435,7 +434,7 @@ Respond with only "yes" or "no"."""
                 thumbnail_url = asset.get("thumbnail") or asset.get("thumbnailUrl") or asset.get("rendition") or ""
                 asset_type = asset.get("type") or asset.get("jcr:primaryType") or asset.get("mimeType") or ""
                 
-                # Build thumbnail URL if not provided
+                # Build Dynamic Media URLs if not provided
                 if not thumbnail_url:
                     # Try to extract asset identifier from various fields
                     asset_id = asset.get("scene7Id") or asset.get("dynamicMediaId") or asset.get("id") or ""
@@ -460,13 +459,12 @@ Respond with only "yes" or "no"."""
                                 asset_id = asset_name
                     
                     # Construct Dynamic Media thumbnail URL
-                    # Format: {aem_server}/is/image/CEM/{asset_id}?$thumbnail$&fmt=jpeg,rgb
+                    # Format: {scene7_base}/{asset_id}?$thumbnail$&fmt=jpeg,rgb
                     if asset_id:
                         # URL encode the asset ID (handle spaces, special chars)
                         encoded_id = urllib.parse.quote(asset_id, safe='')
                         # Build query string - $ characters need to be URL encoded as %24
-                        # Note: The & will be HTML-escaped to &amp; when inserted into HTML
-                        thumbnail_url = f"{scene7_base}{encoded_id}?%24thumbnail%24&fmt=jpeg,rgb"
+                        thumbnail_url = f"{scene7_base}/{encoded_id}?%24thumbnail%24&fmt=jpeg,rgb"
                 
                 # Escape HTML in text fields to prevent XSS
                 def escape_html(text):
@@ -476,15 +474,36 @@ Respond with only "yes" or "no"."""
                 
                 formatted += "<div class='asset-thumbnail'>\n"
                 if thumbnail_url:
-                    # For img src in HTML, we need to HTML-escape & to &amp;
-                    # The thumbnail_url already has proper URL encoding (%24 for $, etc.)
-                    # When HTML-escaped, & becomes &amp; which browsers handle correctly
-                    escaped_url = escape_html(thumbnail_url)
+                    # Create Dynamic Media viewer URL (full-size image)
+                    # Extract asset_id from thumbnail_url for viewer URL
+                    asset_id_for_viewer = asset.get("scene7Id") or asset.get("dynamicMediaId") or asset.get("id") or ""
+                    if not asset_id_for_viewer and asset_path:
+                        path_parts = asset_path.split("/")
+                        filename = path_parts[-1] if path_parts else asset_name
+                        if "." in filename:
+                            asset_id_for_viewer = filename.rsplit(".", 1)[0]
+                        else:
+                            asset_id_for_viewer = filename
+                    elif not asset_id_for_viewer:
+                        if "." in asset_name:
+                            asset_id_for_viewer = asset_name.rsplit(".", 1)[0]
+                        else:
+                            asset_id_for_viewer = asset_name
+                    
+                    # Dynamic Media full-size URL (for viewer)
+                    encoded_viewer_id = urllib.parse.quote(asset_id_for_viewer, safe='')
+                    viewer_url = f"{scene7_base}/{encoded_viewer_id}?fmt=jpeg,rgb"
+                    
+                    # HTML-escape URLs and title
+                    escaped_thumbnail_url = escape_html(thumbnail_url)
+                    escaped_viewer_url = escape_html(viewer_url)
                     escaped_title = escape_html(asset_title)
-                    # Use double quotes for src to avoid conflicts with single quotes
-                    # Add error handler to show placeholder if image fails to load
-                    formatted += f"  <img src=\"{escaped_url}\" alt=\"{escaped_title}\" class=\"asset-image\" onerror=\"this.style.display='none'; this.nextElementSibling.style.display='flex';\"/>\n"
-                    formatted += f"  <div class='asset-placeholder' style='display:none;'>📄</div>\n"
+                    
+                    # Wrap image in clickable link to open Dynamic Media viewer
+                    formatted += f"  <a href=\"{escaped_viewer_url}\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"asset-image-link\">\n"
+                    formatted += f"    <img src=\"{escaped_thumbnail_url}\" alt=\"{escaped_title}\" class=\"asset-image\" onerror=\"this.style.display='none'; this.nextElementSibling.style.display='flex';\"/>\n"
+                    formatted += f"    <div class='asset-placeholder' style='display:none;'>📄</div>\n"
+                    formatted += f"  </a>\n"
                 else:
                     formatted += f"  <div class='asset-placeholder'>📄</div>\n"
                 formatted += "  <div class='asset-info'>\n"
