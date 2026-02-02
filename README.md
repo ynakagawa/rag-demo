@@ -26,10 +26,11 @@ A production-ready RAG (Retrieval-Augmented Generation) chatbot application for 
 
 Already done! But if you need to reinstall:
 
-```bash
+```
+bash
 #Python virtual environment (example uses a virtual env. called venv).
 https://www.w3schools.com/python/python_virtualenv.asp
-```python -m venv myfirstproject
+python -m venv myfirstproject
 ```
 
 # Python dependencies
@@ -42,7 +43,6 @@ pip install -r requirements.txt
 npm install
 ```
 #.env file (create a .env file and place API endpoints and keys 
-```
 #OpenAPI
 #   1. Go to https://openai.com
 #   2. Click Login > API Platform
